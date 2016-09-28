@@ -207,6 +207,26 @@ func (m *Manager) Serve() error {
 	return m.ServeHTTPS()
 }
 
+// ServeHandler does the same thing as Serve, but allows you to pass a custom
+// http.Handler
+func (m *Manager) ServeHandler(handler http.Handler) error {
+	l, err := net.Listen("tcp", ":http")
+	if err != nil {
+		return err
+	}
+	defer l.Close()
+	go http.Serve(l, http.HandlerFunc(RedirectHTTP))
+
+	srv := &http.Server{
+		Addr:    ":https",
+		Handler: handler,
+		TLSConfig: &tls.Config{
+			GetCertificate: m.GetCertificate,
+		},
+	}
+	return srv.ListenAndServeTLS("", "")
+}
+
 // ServeHTTPS runs an HTTPS web server using TLS certificates obtained by the manager.
 // The HTTPS server obtains TLS certificates as needed and responds to requests
 // by invoking http.DefaultServeMux.
